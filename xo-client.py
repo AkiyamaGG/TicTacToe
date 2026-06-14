@@ -16,40 +16,109 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
                            QPalette, QPixmap, QRadialGradient, QTransform, QStandardItemModel)
 from PySide6.QtWidgets import (QApplication, QFrame, QHeaderView, QLabel,
                                QMainWindow, QPushButton, QSizePolicy, QStatusBar,
-                               QTabWidget, QTableView, QWidget, QVBoxLayout)
-import sys, socket, os, json, requests
+                               QTabWidget, QTableView, QWidget, QVBoxLayout, QMessageBox)
+import sys, socket, requests
 
-HOST_URL = "http://127.0.0.1:8000"
+HOST_URL = "127.0.0.1:8000"
 
 nickname = socket.gethostname()
-try:
-    player = requests.get(f'{HOST_URL}/player/info/nickname/{nickname}')
-    uid = player.json()["uid"]
-    elo = player.json()["elo"]
-    wins = player.json()["wins"]
-    loses = player.json()["loses"]
-    matches = player.json()["matches"]
-    status = "Нажмите старт"
-except requests.exceptions.JSONDecodeError:
-    requests.post(f'{HOST_URL}/player/create',json={'nickname':nickname})
-    player = requests.get(f'{HOST_URL}/player/info/nickname/{nickname}')
-    uid = player.json()["uid"]
-    elo = player.json()["elo"]
-    wins = player.json()["wins"]
-    loses = player.json()["loses"]
-    matches = player.json()["matches"]
-    status = "Нажмите старт"
-except requests.exceptions.ConnectionError:
-    uid = ''
-    elo = 0
-    wins = 0
-    loses = 0
-    matches = 0
-    p_status = 'offline'
-    status = "Сервер недоступен😭"
+
+class Player:
+    def __init__(self):
+        pass
+    def create_player(nickname):
+        requests.post(f'http://{HOST_URL}/player/create',json={'nickname':nickname})
+    def get_player_info_for_nickname(self, nickname):
+        try:
+            player = requests.get(f'http://{HOST_URL}/player/info/nickname/{nickname}')
+            uid = player.json()["uid"]
+            elo = player.json()["elo"]
+            wins = player.json()["wins"]
+            loses = player.json()["loses"]
+            matches = player.json()["matches"]
+            p_status = player.json()["status"]
+            status = "Нажмите старт"
+            return uid,elo,wins,loses,matches,p_status,status
+        except requests.exceptions.JSONDecodeError:
+            self.create_player(nickname)
+            player = requests.get(f'http://{HOST_URL}/player/info/nickname/{nickname}')
+            uid = player.json()["uid"]
+            elo = player.json()["elo"]
+            wins = player.json()["wins"]
+            loses = player.json()["loses"]
+            matches = player.json()["matches"]
+            p_status = player.json()["status"]
+            status = "Нажмите старт"
+            return uid,elo,wins,loses,matches,p_status,status
+        except requests.exceptions.ConnectionError:
+            uid = ''
+            elo = 0
+            wins = 0
+            loses = 0
+            matches = 0
+            p_status = 'offline'
+            status = "Сервер недоступен😭"
+            return uid,elo,wins,loses,matches,p_status,status
+        
+    def get_player_info_for_uid(uid):
+        try:
+            player = requests.get(f'http://{HOST_URL}/player/info/uid/{uid}')
+            elo = player.json()["elo"]
+            wins = player.json()["wins"]
+            loses = player.json()["loses"]
+            matches = player.json()["matches"]
+            p_status = player.json()["status"]
+            status = "Нажмите старт"
+            return uid,elo,wins,loses,matches,p_status,status
+        except requests.exceptions.ConnectionError:
+            elo = 0
+            wins = 0
+            loses = 0
+            matches = 0
+            p_status = 'offline'
+            status = "Сервер недоступен😭"
+            return elo,wins,loses,matches,p_status,status
+    def get_player_status():
+        pass
+    def update_player_status(uid,p_status):
+        try:
+            requests.post(f"http://{HOST_URL}/player/status/uid/update/{uid}",json={"uid":uid,"status":p_status})
+        except requests.exceptions.ConnectionError:
+            status = "Сервер недоступен😭"
+            return status
+
+player = Player
+
+uid,elo,wins,loses,matches,p_status,status = player.get_player_info_for_nickname(player, nickname)
+
 mid = ""
 o_nickname = ""
 o_elo = 0
+
+if p_status == "online" or p_status == "in_game" or p_status == "in_queue":
+   sys.exit()
+else:
+    player.update_player_status(uid, "online")
+
+
+class Rating:
+    def __init__(self):
+        self.type = None
+        self.limit = 100
+    def get_rating(type, limit=100):
+        try:
+            table = requests.get(f"http://{HOST_URL}/rating/{type}/?limit={limit}").json()
+            keys = ["nickname",type]
+            return table, keys
+        except requests.exceptions.JSONDecodeError:
+            table = [{"nickname":"",type:""}]
+            keys = ["nickname",type]
+            return table, keys
+        except requests.exceptions.ConnectionError:
+            table = [{"nickname":"",type:""}]
+            keys = ["nickname",type]
+            return table, keys
+
 
 class Ui_TicTacToe(object):
     def setupUi(self, TicTacToe):
@@ -160,8 +229,9 @@ class Ui_TicTacToe(object):
         self.tableView.setEnabled(True)
         self.tableView.setGeometry(QRect(0, 0, 420, 180))
 
-        elo_table = requests.get(f"{HOST_URL}/rating/elo").json()
-        keys = list(elo_table[0].keys())
+        rating = Rating
+
+        elo_table, keys = rating.get_rating("elo")
 
         self.model = QStandardItemModel()
         self.model.setHorizontalHeaderLabels(['№'] + keys)
@@ -189,8 +259,7 @@ class Ui_TicTacToe(object):
         self.tableView_2.setEnabled(True)
         self.tableView_2.setGeometry(QRect(0, 0, 420, 180))
 
-        wins_table = requests.get(f"{HOST_URL}/rating/wins").json()
-        keys = list(wins_table[0].keys())
+        wins_table, keys = rating.get_rating("wins")
 
         self.model = QStandardItemModel()
         self.model.setHorizontalHeaderLabels(['№'] + keys)
@@ -218,8 +287,8 @@ class Ui_TicTacToe(object):
         self.tableView_3.setEnabled(True)
         self.tableView_3.setGeometry(QRect(0, 0, 420, 180))
 
-        loses_table = requests.get(f"{HOST_URL}/rating/loses").json()
-        keys = list(loses_table[0].keys())
+        
+        loses_table, keys = rating.get_rating("loses")
 
         self.model = QStandardItemModel()
         self.model.setHorizontalHeaderLabels(['№'] + keys)
@@ -247,8 +316,7 @@ class Ui_TicTacToe(object):
         self.tableView_4.setEnabled(True)
         self.tableView_4.setGeometry(QRect(0, 0, 420, 180))
 
-        matches_table = requests.get(f"{HOST_URL}/rating/matches").json()
-        keys = list(matches_table[0].keys())
+        matches_table, keys = rating.get_rating("matches")
 
         self.model = QStandardItemModel()
         self.model.setHorizontalHeaderLabels(['№'] + keys)
@@ -302,7 +370,7 @@ class Ui_TicTacToe(object):
         self.label_2.setText(QCoreApplication.translate("TicTacToe", f"ELO: {elo}", None))
         self.pushButton_10.setText(QCoreApplication.translate("TicTacToe", u"Start", None))
         self.label_4.setText(QCoreApplication.translate("TicTacToe", f"{nickname}", None))
-        self.label_5.setText(QCoreApplication.translate("TicTacToe", f"W/L: {wins/loses if loses != 0 else 0}", None))
+        self.label_5.setText(QCoreApplication.translate("TicTacToe", f"W/L: {round(wins/loses + 0.000000001,2) if loses != 0 else wins}", None))
         self.label_6.setText(QCoreApplication.translate("TicTacToe", f"You:", None))
         self.label_7.setText(QCoreApplication.translate("TicTacToe", f"Opponent:", None))
         self.label_8.setText(QCoreApplication.translate("TicTacToe", f"{o_nickname}", None))
@@ -321,6 +389,18 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.ui = Ui_TicTacToe()
         self.ui.setupUi(self)
+    def closeEvent(self, event):
+        reply = QMessageBox.question(self, 'Выход', 'Вы действительно хотите выйти?',QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No)
+
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                player.update_player_status(uid,"offline")
+                event.accept()
+            except requests.exceptions.ConnectionError:
+                event.accept()
+        else:
+            event.ignore()
+            
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
