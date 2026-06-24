@@ -2,8 +2,6 @@ import datetime, uuid
 import sqlite3
 from fastapi import APIRouter
 from pydantic import BaseModel
-import time
-import random
 
 router = APIRouter(prefix="/player", tags=["API"])
 

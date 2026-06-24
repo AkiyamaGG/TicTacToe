@@ -1,13 +1,8 @@
 from fastapi import WebSocket, APIRouter, WebSocketDisconnect
 import datetime
-import sqlite3
-import fakeredis
-import time
-import random
+import sqlite3,random
 
 router = APIRouter(prefix="/match", tags=["API"])
-
-# redis = fakeredis.FakeAsyncRedis
 
 MATCHES = []                # список словарей матчей
 ACTIVE_CONNECTIONS = {}     # uid → WebSocket
@@ -253,23 +248,22 @@ async def websocket_endpoint(websocket: WebSocket, uid:str):
                             break
 
     except WebSocketDisconnect:
-        pass
-        # # Игрок отключился
-        # if uid in QUEUE:
-        #     QUEUE.remove(uid)
-        #     print(QUEUE)
-        # else:
-        #     room = ROOMS.pop(mid)
-        #     for ws in room:
-        #         try:
-        #             await ws.send_json({"event": "match_closed"})
-        #         except:
-        #             pass
-        #     # Удаляем матч из MATCHES
-        #     for m in MATCHES:
-        #         if m["mid"] == mid:
-        #             MATCHES.remove(m)
-        #             break
+        # Игрок отключился
+        if uid in QUEUE:
+            QUEUE.remove(uid)
+            print(QUEUE)
+        else:
+            room = ROOMS.pop(mid)
+            for ws in room:
+                try:
+                    await ws.send_json({"event": "match_closed"})
+                except:
+                    pass
+            # Удаляем матч из MATCHES
+            for m in MATCHES:
+                if m["mid"] == mid:
+                    MATCHES.remove(m)
+                    break
     finally:
         # Очистка
         # Удаляем из ACTIVE_CONNECTIONS
