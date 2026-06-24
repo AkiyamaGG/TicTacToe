@@ -252,6 +252,7 @@ async def websocket_endpoint(websocket: WebSocket, uid:str):
         if uid in QUEUE:
             QUEUE.remove(uid)
             print(QUEUE)
+        # elif uid in MATCHES:
         else:
             room = ROOMS.pop(mid)
             for ws in room:
