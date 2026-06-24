@@ -17,7 +17,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QFrame, QHeaderView, QLabel,
                                QMainWindow, QPushButton, QSizePolicy, QStatusBar,
                                QTabWidget, QTableView, QWidget, QVBoxLayout, QMessageBox)
-import sys, socket, requests
+import sys, socket, requests, websocket
 
 HOST_URL = "127.0.0.1:8000"
 
@@ -40,7 +40,7 @@ class Player:
             status = "Нажмите старт"
             return uid,elo,wins,loses,matches,p_status,status
         except requests.exceptions.JSONDecodeError:
-            self.create_player(nickname)
+            self.create_player(self,nickname)
             player = requests.get(f'http://{HOST_URL}/player/info/nickname/{nickname}')
             uid = player.json()["uid"]
             elo = player.json()["elo"]
@@ -69,7 +69,7 @@ class Player:
             matches = player.json()["matches"]
             p_status = player.json()["status"]
             status = "Нажмите старт"
-            return uid,elo,wins,loses,matches,p_status,status
+            return elo,wins,loses,matches,p_status,status
         except requests.exceptions.ConnectionError:
             elo = 0
             wins = 0
@@ -87,15 +87,25 @@ class Player:
             status = "Сервер недоступен😭"
             return status
 
+class Opponent:
+    def __init__(self):
+        pass
+    def get_opponent_info(uid):
+        opponent = Player.get_player_info_for_uid(uid)
+        nickname = opponent["nickname"]
+        elo = opponent["elo"]
+        return nickname,elo
+        
+
 player = Player
 
 uid,elo,wins,loses,matches,p_status,status = player.get_player_info_for_nickname(player, nickname)
 
 mid = ""
-o_nickname = ""
-o_elo = 0
+o_nickname, o_elo = '',0
 
-if p_status == "online" or p_status == "in_game" or p_status == "in_queue":
+
+if p_status == "online":
    sys.exit()
 else:
     player.update_player_status(uid, "online")

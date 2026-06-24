@@ -1,8 +1,9 @@
 import datetime, uuid
 import sqlite3
-from sqlite3 import *
-from fastapi import *
+from fastapi import APIRouter
 from pydantic import BaseModel
+import time
+import random
 
 router = APIRouter(prefix="/player", tags=["API"])
 
@@ -39,7 +40,7 @@ async def get_player_info_for_id(user_id: str):
     r = cursor.fetchone()
     conn.close()
     return {"uid": r[0], "nickname": r[1],
-            "elo": r[2], "wins": r[3], "loses": r[4],
+            "elo": round(r[2]+0.0000001), "wins": r[3], "loses": r[4],
             "matches": r[5], "datetime": r[6], "status": r[7]}
 
 
@@ -53,7 +54,7 @@ async def get_player_info_for_username(username: str):
     r = cursor.fetchone()
     conn.close()
     return {"uid": r[0], "nickname": r[1],
-            "elo": r[2], "wins": r[3], "loses": r[4],
+            "elo": round(r[2]+0.0000001), "wins": r[3], "loses": r[4],
             "matches": r[5], "datetime": r[6], "status": r[7]}
 
 
