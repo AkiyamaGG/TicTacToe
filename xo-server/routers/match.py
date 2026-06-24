@@ -123,8 +123,8 @@ async def websocket_endpoint(websocket: WebSocket, uid:str):
                     continue
 
                 # Проверка, чей ход
-                if (match["current_mark"] == '1' and uid != match["player_1"]) or \
-                   (match["current_mark"] == '2' and uid != match["player_2"]):
+                if (match["current_mark"] == player_1 and uid != match["player_1"]) or \
+                   (match["current_mark"] == player_2 and uid != match["player_2"]):
                     await websocket.send_json({"error": "Not your turn"})
                     continue
 
@@ -171,7 +171,6 @@ async def websocket_endpoint(websocket: WebSocket, uid:str):
                         "winner": winner,
                         "board": match["board"]
                     }
-                    cursor.execute('''INSERT INTO match (mid,player)''')
                     # Удаляем комнату после игры
                     room = ROOMS.pop(match_id, set())
                     for ws in room:
@@ -254,22 +253,23 @@ async def websocket_endpoint(websocket: WebSocket, uid:str):
                             break
 
     except WebSocketDisconnect:
-        # Игрок отключился
-        if uid in QUEUE:
-            QUEUE.remove(uid)
-            print(QUEUE)
-        else:
-            room = ROOMS.pop(mid)
-            for ws in room:
-                try:
-                    await ws.send_json({"event": "match_closed"})
-                except:
-                    pass
-            # Удаляем матч из MATCHES
-            for m in MATCHES:
-                if m["mid"] == mid:
-                    MATCHES.remove(m)
-                    break
+        pass
+        # # Игрок отключился
+        # if uid in QUEUE:
+        #     QUEUE.remove(uid)
+        #     print(QUEUE)
+        # else:
+        #     room = ROOMS.pop(mid)
+        #     for ws in room:
+        #         try:
+        #             await ws.send_json({"event": "match_closed"})
+        #         except:
+        #             pass
+        #     # Удаляем матч из MATCHES
+        #     for m in MATCHES:
+        #         if m["mid"] == mid:
+        #             MATCHES.remove(m)
+        #             break
     finally:
         # Очистка
         # Удаляем из ACTIVE_CONNECTIONS
