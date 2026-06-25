@@ -1,6 +1,8 @@
 from fastapi import WebSocket, APIRouter, WebSocketDisconnect
 import datetime
 import sqlite3,random
+from pathlib import Path
+from sys import argv
 
 router = APIRouter(prefix="/match", tags=["API"])
 
@@ -13,7 +15,9 @@ EVENT_HANDLER = ['start', 'cancel', 'move', 'close_match']
 
 @router.get("/info/{m_id}")
 async def get_match_info(m_id: str):
-    conn = sqlite3.connect("xo-server/database/database.db")
+    script_dir = Path(argv[0]).parent.resolve()  # путь к каталогу скрипта
+    db_path = script_dir / 'database' / 'database.db'
+    conn = sqlite3.connect(db_path)
 
     cursor = conn.cursor()
 
@@ -23,14 +27,16 @@ async def get_match_info(m_id: str):
     return {"mid": r[0], "player_1": r[1],
             "player_2": r[2], "winner": r[3], "elo_1": r[4],
             "elo_2": r[5], "start_datetime": r[6], "finish_datetime": r[7]}
-
+#TODO надо бы мделать автолуз
 @router.websocket("/ws/{uid}")
 async def websocket_endpoint(websocket: WebSocket, uid:str):
     await websocket.accept()
     ACTIVE_CONNECTIONS[uid] = websocket
 
+    script_dir = Path(argv[0]).parent.resolve()  # путь к каталогу скрипта
+    db_path = script_dir / 'database' / 'database.db'
+    conn = sqlite3.connect(db_path)
 
-    conn = sqlite3.connect("xo-server/database/database.db")
     cursor = conn.cursor()
 
     try:
@@ -48,18 +54,22 @@ async def websocket_endpoint(websocket: WebSocket, uid:str):
                 global QUEUE
                 QUEUE.append(uid)
                 QUEUE = list(set(QUEUE))
+                await websocket.send_json({"event": "Add in queue"})
 
                 # Проверяем, можно ли создать матч
                 if len(QUEUE) >= 2:
+                    global player_1
+                    global player_2
                     player_1 = QUEUE.pop(0)
                     player_2 = QUEUE.pop(0)
+                    global s_datetime
                     s_datetime = datetime.datetime.now()
 
                     # Генерация ID матча (без словарей в строке)
                     mid = f"{round(int(s_datetime.timestamp())+0.0000001)}-{player_1}-{player_2}-{random.randint(100000,1000000)}"
 
                     board = [0] * 9
-                    current_mark = '1'
+                    current_mark = player_1
                     moves = 0
 
                     MATCHES.append({
@@ -85,7 +95,9 @@ async def websocket_endpoint(websocket: WebSocket, uid:str):
                         "event": "matches_found",
                         "mid": mid,
                         "board": board,
-                        "current_mark": current_mark
+                        "current_mark": current_mark,
+                        "player_1":player_1,
+                        "player_2":player_2
                     }
                     for ws in room:
                         try:
@@ -118,9 +130,8 @@ async def websocket_endpoint(websocket: WebSocket, uid:str):
                     continue
 
                 # Проверка, чей ход
-                if (match["current_mark"] == player_1 and uid != match["player_1"]) or \
-                   (match["current_mark"] == player_2 and uid != match["player_2"]):
-                    await websocket.send_json({"error": "Not your turn"})
+                if (match["current_mark"] == player_1 and uid != match["player_1"]) or (match["current_mark"] == player_2 and uid != match["player_2"]):
+                    await websocket.send_json({"error": "Not your turn","position":position})
                     continue
 
                 # Проверка, что клетка свободна
@@ -129,7 +140,7 @@ async def websocket_endpoint(websocket: WebSocket, uid:str):
                     continue
 
                 # Делаем ход
-                mark = match["current_mark"]
+                mark = 1 if match["current_mark"] == player_1 else 2
                 match["board"][position] = int(mark)
                 match["moves"] += 1
 
@@ -146,7 +157,7 @@ async def websocket_endpoint(websocket: WebSocket, uid:str):
                     elo_1 = (20 if R1 < 2400 else 10) * ((1 if player_1 == winner else 0) - (1 / (1 + 10 * ((R2 - R1) / 400))))
                     elo_2 = (20 if R1 < 2400 else 10) * ((1 if player_2 == winner else 0) - (1 / (1 + 10 * ((R1 - R2) / 400))))
 
-                    cursor.execute('''INSERT INTO match (mid,player_1,player_2,winner,elo_1,elo_2,start_datetime,finish_datetime) VALUES (?,?,?,?,?,?,?,?)''', (mid,player_1,player_2,winner,elo_1,elo_2,s_datetime,f_datetime,))
+                    cursor.execute('''INSERT INTO match (mid,player_1,player_2,winner,elo_1,elo_2,start_datetime,finish_datetime) VALUES (?,?,?,?,?,?,?,?)''', (match_id,player_1,player_2,winner,elo_1,elo_2,s_datetime,f_datetime,))
                     cursor.execute('''UPDATE player SET elo = ? WHERE uid = ?''', (R1+elo_1, player_1,))
                     cursor.execute('''UPDATE player SET elo = ? WHERE uid = ?''', (R2+elo_2, player_2,))
                     cursor.execute('''UPDATE player SET matches = matches + 1 WHERE uid = ?''', (player_1,))
@@ -189,7 +200,7 @@ async def websocket_endpoint(websocket: WebSocket, uid:str):
                     elo_1 = (20 if R1 < 2400 else 10) * (0.5  - (1 / (1 + 10 * ((R2 - R1) / 400))))
                     elo_2 = (20 if R1 < 2400 else 10) * (0.5 - (1 / (1 + 10 * ((R1 - R2) / 400))))
 
-                    cursor.execute('''INSERT INTO match (mid,player_1,player_2,winner,elo_1,elo_2,start_datetime,finish_datetime) VALUES (?,?,?,?,?,?,?,?)''', (mid,player_1,player_2,winner,elo_1,elo_2,s_datetime,f_datetime,))
+                    cursor.execute('''INSERT INTO match (mid,player_1,player_2,winner,elo_1,elo_2,start_datetime,finish_datetime) VALUES (?,?,?,?,?,?,?,?)''', (match_id,player_1,player_2,winner,elo_1,elo_2,s_datetime,f_datetime,))
                     cursor.execute('''UPDATE player SET elo = ? WHERE uid = ?''', (R1+elo_1, player_1,))
                     cursor.execute('''UPDATE player SET elo = ? WHERE uid = ?''', (R2+elo_2, player_2,))
                     cursor.execute('''UPDATE player SET matches = matches + 1 WHERE uid = ?''', (player_1,))
@@ -202,7 +213,7 @@ async def websocket_endpoint(websocket: WebSocket, uid:str):
                         "winner": None,  # ничья
                         "board": match["board"]
                     }
-                    room = ROOMS.pop(match_id, set())
+                    room = ROOMS.pop(mid, set())
                     for ws in room:
                         try:
                             await ws.send_json(update_msg)
@@ -211,7 +222,7 @@ async def websocket_endpoint(websocket: WebSocket, uid:str):
                     continue
 
                 # Переход хода
-                match["current_mark"] = '2' if mark == '1' else '1'
+                match["current_mark"] = player_1 if mark == 2 else player_2
 
                 # Рассылка обновлённого состояния комнате
                 update_msg = {
@@ -254,7 +265,10 @@ async def websocket_endpoint(websocket: WebSocket, uid:str):
             print(QUEUE)
         # elif uid in MATCHES:
         else:
-            room = ROOMS.pop(mid)
+            try:
+                room = ROOMS.pop(match_id)
+            except Exception:
+                print("Match not found for delete room")
             for ws in room:
                 try:
                     await ws.send_json({"event": "match_closed"})
@@ -262,7 +276,7 @@ async def websocket_endpoint(websocket: WebSocket, uid:str):
                     pass
             # Удаляем матч из MATCHES
             for m in MATCHES:
-                if m["mid"] == mid:
+                if m["mid"] == match_id:
                     MATCHES.remove(m)
                     break
     finally:

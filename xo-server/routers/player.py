@@ -2,6 +2,8 @@ import datetime, uuid
 import sqlite3
 from fastapi import APIRouter
 from pydantic import BaseModel
+from pathlib import Path
+from sys import argv
 
 router = APIRouter(prefix="/player", tags=["API"])
 
@@ -15,7 +17,9 @@ class UserStatus(BaseModel):
 
 @router.post("/create/")
 async def create_player(username: UserCreate):
-    conn = sqlite3.connect("xo-server/database/database.db")
+    script_dir = Path(argv[0]).parent.resolve()  # путь к каталогу скрипта
+    db_path = script_dir / 'database' / 'database.db'
+    conn = sqlite3.connect(db_path)
 
     cursor = conn.cursor()
 
@@ -30,7 +34,9 @@ async def create_player(username: UserCreate):
 
 @router.get("/info/uid/{user_id}")
 async def get_player_info_for_id(user_id: str):
-    conn = sqlite3.connect("xo-server/database/database.db")
+    script_dir = Path(argv[0]).parent.resolve()  # путь к каталогу скрипта
+    db_path = script_dir / 'database' / 'database.db'
+    conn = sqlite3.connect(db_path)
 
     cursor = conn.cursor()
 
@@ -44,7 +50,9 @@ async def get_player_info_for_id(user_id: str):
 
 @router.get("/info/nickname/{username}")
 async def get_player_info_for_username(username: str):
-    conn = sqlite3.connect("xo-server/database/database.db")
+    script_dir = Path(argv[0]).parent.resolve()  # путь к каталогу скрипта
+    db_path = script_dir / 'database' / 'database.db'
+    conn = sqlite3.connect(db_path)
 
     cursor = conn.cursor()
 
@@ -58,7 +66,9 @@ async def get_player_info_for_username(username: str):
 
 @router.get("/status/uid/{user_id}")
 async def get_player_status(user_id: str):
-    conn = sqlite3.connect("xo-server/database/database.db")
+    script_dir = Path(argv[0]).parent.resolve()  # путь к каталогу скрипта
+    db_path = script_dir / 'database' / 'database.db'
+    conn = sqlite3.connect(db_path)
 
     cursor = conn.cursor()
 
@@ -70,7 +80,9 @@ async def get_player_status(user_id: str):
 
 @router.post("/status/uid/update/{user_id}")
 async def update_player_status(user_id: str, user_status: UserStatus):
-    conn = sqlite3.connect("xo-server/database/database.db")
+    script_dir = Path(argv[0]).parent.resolve()  # путь к каталогу скрипта
+    db_path = script_dir / 'database' / 'database.db'
+    conn = sqlite3.connect(db_path)
 
     cursor = conn.cursor()
 

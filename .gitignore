@@ -5,3 +5,7 @@ __pycache__/
 
 .idea/
 .code-workspace.code-workspace
+
+dist/
+build/
+*.spec

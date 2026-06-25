@@ -1,7 +1,11 @@
+from pathlib import Path
+from sys import argv
 import sqlite3
 
 def create_database():
-	conn = sqlite3.connect("xo-server/database/database.db")
+	script_dir = Path(argv[0]).parent.resolve()  # путь к каталогу скрипта
+	db_path = script_dir / 'database' / 'database.db'
+	conn = sqlite3.connect(db_path)
 
 	cursor = conn.cursor()
 
@@ -9,7 +13,7 @@ def create_database():
 		CREATE TABLE IF NOT EXISTS player (
 		uid	TEXT NOT NULL,
 		nickname	TEXT NOT NULL UNIQUE,
-		elo	INTEGER DEFAULT 0,
+		elo	INTEGER DEFAULT 1200,
 		wins	INTEGER DEFAULT 0,
 		loses	INTEGER DEFAULT 0,
 		matches	INTEGER DEFAULT 0,

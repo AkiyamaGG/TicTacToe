@@ -1,12 +1,16 @@
 import sqlite3
 from sqlite3 import *
 from fastapi import APIRouter
+from pathlib import Path
+from sys import argv
 
 router = APIRouter(prefix="/rating", tags=["API"])
 
 @router.get("/{type}/")
 async def get_rating(type: str, limit: int = 100):
-    conn = sqlite3.connect("xo-server/database/database.db")
+    script_dir = Path(argv[0]).parent.resolve()  # путь к каталогу скрипта
+    db_path = script_dir / 'database' / 'database.db'
+    conn = sqlite3.connect(db_path)
 
     cursor = conn.cursor()
 
