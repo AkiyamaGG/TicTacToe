@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (QApplication, QFrame, QHeaderView, QLabel,
                                QTabWidget, QTableView, QWidget, QVBoxLayout, QMessageBox)
 import sys, socket, requests, websocket, json, queue, threading, time
 
-HOST_URL = "26.168.26.175:8000"
+HOST_URL = "127.0.0.1:8000"
 
 nickname = socket.gethostname()
 
