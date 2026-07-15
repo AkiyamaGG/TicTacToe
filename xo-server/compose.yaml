@@ -1,0 +1,12 @@
+version: '4.81.0'
+
+services:
+  tictactoe:
+    build: .
+    image: tictactoe:latest
+    container_name: tictactoe
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    volumes:
+      - ./database:/app/database

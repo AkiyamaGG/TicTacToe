@@ -9,7 +9,9 @@ from database import create_database
 from contextlib import asynccontextmanager
 from pathlib import Path
 from sys import argv
+from dotenv import load_dotenv
 
+load_dotenv()
 
 # --- 1. НАСТРОЙКА ЛОГИРОВАНИЯ ---
 # Базовый конфиг: выводим время, уровень и сообщение
@@ -156,6 +158,8 @@ def console_listener():
 
 if __name__ == '__main__':
     import uvicorn
+
+    port = int(os.getenv("PORT"))
     
     # Запускаем слушатель консоли в отдельном daemon-потоке
     # (daemon=True означает, что поток умрет вместе с основным процессом)
@@ -165,4 +169,4 @@ if __name__ == '__main__':
     
     # Запуск сервера. Обратите внимание, что мы убрали reload=True, 
     # так как он конфликтует с консольным вводом (input)
-    uvicorn.run("main:app", host="0.0.0.0", port=8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
